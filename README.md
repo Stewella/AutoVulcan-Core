@@ -7,7 +7,7 @@ It is designed to perform static code analysis, test case generation, and featur
 This module leverages:
 - **SootUp** — for advanced static code analysis, building Call Graphs and Control Flow Graphs (CFGs).
 - **EvoSuite** — for automated unit test generation and mutation testing.
-- **PostgreSQL** — for storing extracted metadata and analysis results.
+- **PostgreSQL/ Neo4j** — for storing extracted metadata and analysis results.
 The resulting data (e.g., call graphs, control flow graphs, and test coverage metrics) are later consumed by backend and dashboard components for visualization and vulnerability reasoning.
 
 ## 🚀 Core Features
