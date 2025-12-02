@@ -1,393 +1,251 @@
-# SootUp Java Code Analyzer
+# Analyzer Service - Java Static Analysis with SootUp
 
-Alat analisis kode Java yang menggunakan SootUp untuk membangun call graph, menganalisis aliran kontrol, dan melacak dependency.
+A production-ready Java-based static analysis service that communicates with FastAPI backend to perform deep code analysis using SootUp framework.
 
-## Varian Analyzer
+## Architecture Overview
 
-### 1. **Analyzer** (Versi Standar)
-Menganalisis semua method dan call graph dari kode sumber.
-
-**Penggunaan:**
-```bash
-java -jar target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar <source-folder> <main-class>
+```
+FastAPI Backend → Analyzer Service (Spring Boot) → SootUp Engine → Analysis Results → FastAPI Backend
 ```
 
-**Contoh:**
-```bash
-# Menganalisis code di folder external_code dengan main class com.example.Main
-java -jar target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar external_code com.example.Main
+### Components
 
-# Menganalisis code di path absolut
-java -jar target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar D:\MyProject\src org.myapp.Application
-```
+1. **Controller Layer** (`AnalysisController`)
+   - REST API endpoint `/api/analyze`
+   - Health check endpoint `/api/health`
 
-**Output:**
-- `output/analysis_v8.json` - JSON dengan:
-  - `call_graph`: 9 edges dengan source, target, dan line number
-  - `methods`: Detail semua method dengan Jimple representation
-  - `dependencies`: Peta dependencies antar class
+2. **Service Layer**
+   - `AnalysisService`: Orchestrates the analysis workflow
+   - `SootUpEngine`: Performs static analysis using SootUp
+   - `DownloadUtil`: Downloads and extracts source ZIP files
+   - `PomGenerator`: Generates Maven pom.xml from dependency list
+   - `MavenExecutor`: Compiles projects using Maven
 
----
+3. **Client Layer**
+   - `FastApiClient`: Async HTTP client with retry logic for backend communication
 
-### 2. **AnalyzerWithDependencies** 
-Analyzer yang mendukung external dependency JARs untuk project yang membutuhkan library eksternal.
+4. **Model Layer**
+   - Request/Response models with Jackson serialization
+   - Call graph and CFG data structures
 
-**Penggunaan:**
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithDependencies <source-folder> <libs-folder> <main-class>
-```
+## API Specification
 
-**Contoh:**
-```bash
-# Menganalisis project Spring Boot dengan dependencies di folder libs/
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithDependencies \
-    D:\MySpringProject\src \
-    D:\MySpringProject\target\dependency \
-    com.myapp.Application
+### Input (from FastAPI)
 
-# Menganalisis project local dengan dependencies
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithDependencies \
-    src/main/java \
-    libs \
-    org.example.Main
-```
+**POST** `http://analyzer-service:8080/api/analyze`
 
-**Output:**
-Sama seperti Analyzer standar, dengan support untuk dependency eksternal.
-
----
-
-### 3. **AnalyzerWithFilter** (RECOMMENDED)
-Analyzer yang paling fleksibel - mendukung filtering berdasarkan package dependency target.
-
-**Penggunaan:**
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    <source-folder> \
-    <main-class> \
-    [target-dependency-package] \
-    [libs-folder]
-```
-
-**Parameter:**
-- `source-folder` (wajib): Path ke source code Java
-- `main-class` (wajib): Fully qualified main class (e.g., `com.example.Main`)
-- `target-dependency-package` (opsional): Package filter (e.g., `org.apache.poi`, `java.io`, `java.lang`)
-- `libs-folder` (opsional): Path ke folder dependencies, default: `libs`
-
-**Contoh:**
-
-#### Contoh 1: Tanpa filter (analisis semua)
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    external_code com.example.Main
-```
-
-Output:
-```
-=== Analyzer With Dependency Filter ===
-Source folder        : external_code
-Main class           : com.example.Main
-Target dependency    : (none - all calls will be analyzed)
-...
-✔ CallGraph built. Total calls: 9
-✔ CallGraph extracted: 9 total edges
-```
-
-#### Contoh 2: Filter dengan java.io (untuk System.out.println, PrintStream, dll)
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    external_code com.example.Main java.io
-```
-
-Output:
-```
-=== Analyzer With Dependency Filter ===
-Source folder        : external_code
-Main class           : com.example.Main
-Target dependency    : java.io
-...
-✔ CallGraph built. Total calls: 9
-✔ CallGraph extracted: 9 total edges
-✔ Filtered calls with dependency 'java.io': 3 edges
-   - Calls TO target dependency: 3
-   - Calls FROM target dependency: 0
-✔ Extracted 2 methods from affected classes
-✔ JSON exported to output/analysis_v8.json
-```
-
-#### Contoh 3: Filter dengan java.lang (untuk exception handling, dll)
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    external_code com.example.Main java.lang
-```
-
-Output:
-```
-✔ CallGraph built. Total calls: 9
-✔ CallGraph extracted: 9 total edges
-✔ Filtered calls with dependency 'java.lang': 2 edges
-   - Calls TO target dependency: 2
-   - Calls FROM target dependency: 0
-✔ Extracted 4 methods from affected classes
-```
-
-#### Contoh 4: Filter dengan Apache POI (untuk Excel operations)
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    external_code com.myapp.ExcelProcessor org.apache.poi ./libs
-```
-
-#### Contoh 5: Filter dengan Spring Framework
-```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.Application org.springframework ./target/dependency
-```
-
----
-
-## Output JSON Structure
-
-### Tanpa Filter:
 ```json
 {
-  "metadata": {
-    "source_folder": "external_code",
-    "main_class": "com.example.Main",
-    "target_dependency": "none",
-    "total_calls": 9,
-    "filtered_calls": 9
-  },
-  "call_graph": [
+  "projectId": "abc123",
+  "sourceZipUrl": "https://backend.com/uploads/projects/abc123.zip",
+  "dependencies": [
     {
-      "src": "<com.example.Main: void main(java.lang.String[])>",
-      "tgt": "<com.example.Calculator: int add(int,int)>",
-      "line": 8,
-      "src_package": "com.example",
-      "tgt_package": "com.example",
-      "matches": []
-    },
-    ...
-  ],
-  "methods": [...],
-  "dependencies": {...}
+      "groupId": "org.springframework.boot",
+      "artifactId": "spring-boot-starter-webflux",
+      "version": "3.2.0"
+    }
+  ]
 }
 ```
 
-### Dengan Filter (target_dependency: java.io):
+### Output (to FastAPI)
+
+**POST** `http://backend-fastapi:8000/api/analysis/result`
+
 ```json
 {
-  "metadata": {
-    "source_folder": "external_code",
-    "main_class": "com.example.Main",
-    "target_dependency": "java.io",
-    "total_calls": 9,
-    "filtered_calls": 3
-  },
-  "call_graph": [
-    {
-      "src": "<com.example.Main: void main(java.lang.String[])>",
-      "tgt": "<java.io.PrintStream: void println(java.lang.String)>",
-      "line": 9,
-      "src_package": "com.example",
-      "tgt_package": "java.io",
-      "matches": ["TARGET_MATCHES"]  // Indicates target dependency matched
-    },
-    ...
-  ],
-  "methods": [
-    {
-      "class": "com.example.Main",
-      "method": "<com.example.Main: void main(java.lang.String[])>",
-      "package": "com.example",
-      "jimple": [
-        "l0 := @parameter0: java.lang.String[]",
-        "$stack6 = <java.lang.System: java.io.PrintStream out>",
-        "virtualinvoke $stack6.<java.io.PrintStream: void println(java.lang.String)>($stack7)",
-        ...
+  "projectId": "abc123",
+  "analysis": {
+    "callGraph": {
+      "nodes": [
+        {"id": "n1", "label": "App.main()", "type": "entry"},
+        {"id": "n2", "label": "ServiceA.init()", "type": "intermediate"},
+        {"id": "n3", "label": "UnsafeLib.execute()", "type": "vulnerable"}
+      ],
+      "edges": [
+        {"source": "n1", "target": "n2"},
+        {"source": "n2", "target": "n3"}
       ]
-    }
-  ],
-  "dependencies": {
-    "com.example.Main": ["java.io.PrintStream", "com.example.Calculator"],
-    "com.example.Calculator": ["java.lang.ArithmeticException", "java.lang.Object"]
+    },
+    "cfg": [
+      {
+        "class": "ServiceA",
+        "method": "init()",
+        "nodes": [
+          {"id": "c1", "stmt": "new Object()"},
+          {"id": "c2", "stmt": "return"}
+        ],
+        "edges": [
+          {"source": "c1", "target": "c2"}
+        ]
+      }
+    ]
   }
 }
 ```
 
----
+## Analysis Features
 
-## Filter Matching Types
+### Call Graph Analysis
+- **Entry Points**: Identifies main() methods and controller endpoints
+- **CHA Algorithm**: Class Hierarchy Analysis for call graph construction
+- **Node Classification**:
+  - `entry`: Main methods or endpoint handlers
+  - `intermediate`: Application code
+  - `vulnerable`: Methods from listed dependencies
 
-Dalam JSON output, field `matches` menunjukkan tipe filter yang cocok:
+### Control Flow Graph (CFG)
+- Extracts Jimple IR (intermediate representation)
+- Builds CFG nodes and edges for each method
+- Captures statement-level control flow
 
-- **`SOURCE_MATCHES`**: Kode sumber (caller) berasal dari target dependency
-- **`TARGET_MATCHES`**: Kode target (callee) adalah bagian dari target dependency
-- **`[]` (empty)**: Tidak ada filter atau filter tidak diaktifkan
+## Project Structure
 
----
-
-## Common Use Cases
-
-### 1. Analisis Penggunaan Library Tertentu
-```bash
-# Lihat semua kode yang menggunakan Apache POI
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.ExcelExporter org.apache.poi ./libs
+```
+analyzer-service/
+├── src/main/java/com/example/analyzer/
+│   ├── AnalyzerServiceApplication.java
+│   ├── controller/
+│   │   └── AnalysisController.java
+│   ├── service/
+│   │   ├── AnalysisService.java
+│   │   ├── SootUpEngine.java
+│   │   ├── DownloadUtil.java
+│   │   ├── PomGenerator.java
+│   │   └── MavenExecutor.java
+│   ├── client/
+│   │   └── FastApiClient.java
+│   └── model/
+│       ├── AnalysisRequest.java
+│       ├── AnalysisResult.java
+│       ├── CallGraph.java
+│       ├── CallGraphNode.java
+│       ├── CallGraphEdge.java
+│       ├── CFGMethod.java
+│       ├── CFGNode.java
+│       ├── CFGEdge.java
+│       └── Dependency.java
+├── src/main/resources/
+│   └── application.properties
+├── Dockerfile
+├── docker-compose.yml
+└── pom.xml
 ```
 
-### 2. Security Analysis - Tracking Input/Output
-```bash
-# Lihat semua call ke Java I/O (file read/write)
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.DataProcessor java.io
+## Configuration
 
-# Lihat semua call ke Java Reflection (potential security risk)
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.Application java.lang.reflect
+Edit `src/main/resources/application.properties`:
+
+```properties
+# Server
+server.port=8080
+
+# Analyzer paths
+analyzer.repository.base=/app/repository
+
+# FastAPI Backend
+fastapi.backend.url=http://backend-fastapi.com
+fastapi.backend.result-endpoint=/api/analysis/result
+fastapi.backend.error-endpoint=/api/analysis/error
+fastapi.backend.retry-attempts=3
 ```
 
-### 3. CVE Analysis - Tracking Vulnerable Library Usage
-```bash
-# Lihat bagaimana kode menggunakan library yang rentan
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.Application org.apache.struts ./libs
+## Building & Running
 
-# Lihat penggunaan Log4j (untuk CVE-2021-44228)
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.Logger org.apache.logging.log4j
-```
-
-### 4. Database Operation Tracking
-```bash
-# Lihat semua operasi JDBC
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.DataService java.sql
-
-# Lihat penggunaan ORM (Hibernate)
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src/main/java com.myapp.DataService org.hibernate
-```
-
----
-
-## How to Build
+### Local Development
 
 ```bash
-# Compile dan package
-mvn clean package -DskipTests
+# Build
+mvn clean package
 
-# JAR akan tersedia di: target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar
+# Run
+java -jar target/analyzer-service-1.0.0.jar
 ```
 
----
+### Docker
 
-## Dependency Requirements
-
-- **Java 17+** (untuk compilation)
-- **Maven 3.6+**
-- **SootUp 2.0.0**
-- **Gson 2.10.1**
-- **Guava 32.1.3**
-
-Semua dependencies sudah terdefinisi di `pom.xml`.
-
----
-
-## Tips & Tricks
-
-### 1. Menyimpan output dengan nama custom
 ```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    external_code com.example.Main java.io > analysis_java_io.json
+# Build image
+docker build -t analyzer-service:latest .
+
+# Run container
+docker run -p 8080:8080 \
+  -e FASTAPI_BACKEND_URL=http://backend:8000 \
+  -v $(pwd)/repository:/app/repository \
+  analyzer-service:latest
 ```
 
-### 2. Menganalisis multiple packages
-Jalankan analyzer beberapa kali dengan dependency package berbeda:
+### Docker Compose
+
 ```bash
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src com.app.Main java.io > java_io_analysis.json
+# Start service
+docker-compose up -d
 
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src com.app.Main java.sql > java_sql_analysis.json
+# View logs
+docker-compose logs -f
 
-java -cp target/SootUpAnalysis-1.0.0-jar-with-dependencies.jar org.example.sootup.AnalyzerWithFilter \
-    src com.app.Main org.springframework > springframework_analysis.json
+# Stop service
+docker-compose down
 ```
 
-### 3. Parsing JSON output
-```bash
-# Extract hanya call graph
-cat output/analysis_v8.json | jq '.call_graph'
+## Workflow
 
-# Extract methods yang terkait dependency
-cat output/analysis_v8.json | jq '.methods[] | select(.package | startswith("java.io"))'
+1. **Receive Request**: FastAPI sends analysis request with project ZIP URL
+2. **Download**: Service downloads and extracts source code to `/app/repository/{projectId}/src/`
+3. **Generate POM**: Creates `pom.xml` with specified dependencies
+4. **Compile**: Runs Maven to compile code to `/app/repository/{projectId}/build/classes/`
+5. **Analyze**: SootUp loads bytecode, builds call graph and CFG
+6. **Send Result**: Asynchronously posts results back to FastAPI with retry logic
 
-# Count calls per method
-cat output/analysis_v8.json | jq '.call_graph | group_by(.src) | map({src: .[0].src, count: length})'
-```
+## Dependencies
 
----
+- **Spring Boot 3.2.0**: Web framework
+- **SootUp 2.0.0**: Static analysis engine
+- **OkHttp 4.12.0**: Async HTTP client
+- **Apache Commons**: File operations
+- **Jackson**: JSON serialization
+- **Lombok**: Code generation
 
-## Troubleshooting
+## Error Handling
 
-### Error: "JavaCompiler tidak ditemukan"
-**Solusi:** Gunakan JDK, bukan JRE. Set `JAVA_HOME` ke JDK installation.
+- Automatic retries (configurable, default: 3 attempts)
+- Exponential backoff between retries
+- Error notifications sent to FastAPI on failure
+- Comprehensive logging at all stages
 
-### Error: "package X does not exist"
-**Solusi:** Copy dependency JARs ke folder `libs/` dan gunakan AnalyzerWithDependencies atau AnalyzerWithFilter dengan libs path.
+## Logging
 
-### Slow analysis
-**Tips:** 
-- Filter dengan specific dependency untuk mengurangi output
-- Gunakan smaller source code folders
-- Compile dengan `-cp` untuk classpath optimization
+- Console and file logging
+- Log file: `/app/logs/analyzer-service.log`
+- Debug level for analyzer components
+- Warn level for SootUp (reduces noise)
 
----
+## Health Check
 
-## Output Interpretation
+**GET** `http://localhost:8080/api/health`
 
-### Call Graph Entry:
 ```json
 {
-  "src": "<com.example.Main: void main(java.lang.String[])>",
-  "tgt": "<java.io.PrintStream: void println(java.lang.String)>",
-  "line": 9,
-  "src_package": "com.example",
-  "tgt_package": "java.io",
-  "matches": ["TARGET_MATCHES"]
+  "status": "healthy",
+  "service": "analyzer-service"
 }
 ```
 
-**Penjelasan:**
-- `src`: Method yang melakukan pemanggilan (caller)
-- `tgt`: Method yang dipanggil (callee)
-- `line`: Nomor baris di source code
-- `src_package`: Package dari caller
-- `tgt_package`: Package dari callee
-- `matches`: Hasil matching dengan target dependency filter
+## Environment Variables
 
-### Method Entry:
-```json
-{
-  "class": "com.example.Main",
-  "method": "<com.example.Main: void main(java.lang.String[])>",
-  "package": "com.example",
-  "jimple": [...]
-}
-```
+- `JAVA_OPTS`: JVM options (default: `-Xmx2g -Xms512m`)
+- `SPRING_PROFILES_ACTIVE`: Spring profile
+- `FASTAPI_BACKEND_URL`: Backend URL
+- `ANALYZER_REPOSITORY_BASE`: Base path for project repositories
 
-**Penjelasan:**
-- `class`: Fully qualified class name
-- `method`: Method signature
-- `package`: Package name
-- `jimple`: Intermediate representation (Jimple bytecode) dari method
+## Production Deployment
 
----
+1. Configure backend URL in environment
+2. Mount persistent volumes for `/app/repository` and `/app/logs`
+3. Set appropriate memory limits via `JAVA_OPTS`
+4. Use health check endpoint for load balancer
+5. Monitor logs for errors and performance
 
-## Citation & References
+## License
 
-- **SootUp**: https://github.com/soot-oss/SootUp
-- **Gson**: https://github.com/google/gson
-- **Jimple IR**: https://soot-oss.github.io/soot/
-
+MIT License
