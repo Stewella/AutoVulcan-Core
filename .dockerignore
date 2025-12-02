@@ -1,0 +1,14 @@
+target
+.m2
+.git
+.idea
+.vscode
+*.log
+*.tmp
+dependency_temp
+external_code
+external_cve
+output
+temp_classes
+node_modules
+__pycache__

@@ -1,0 +1,13 @@
+AnalysisJava\MainApp.class
+org\example\sootup\Analyzer.class
+AnalysisJava\package-info.class
+AnalysisJava\MathHelper.class
+AnalysisJava\ServiceA.class
+AnalysisJava\Utils.class
+org\example\sootup\AnalyzerWithFilter.class
+AnalysisJava\ServiceB.class
+AnalysisJava\Repository.class
+org\example\package-info.class
+org\example\sootup\AnalyzerWithDependencies.class
+InputCodeJava\package-info.class
+org\example\sootup\AnalyzerServer.class
