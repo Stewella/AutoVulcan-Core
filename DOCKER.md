@@ -11,13 +11,13 @@ docker build -t autovulcan-core:latest .
 Run the container and map port 8080:
 
 ```powershell
-docker run --rm -p 8080:8080 --name autovulcan autovulcan-core:latest
+docker run --rm -p 8090:8080 --name autovulcan autovulcan-core:latest
 ```
 
 Optional: reuse the host Maven cache to speed subsequent builds:
 
 ```powershell
-docker run --rm -p 8080:8080 -v ${env:USERPROFILE}/.m2:/root/.m2 --name autovulcan autovulcan-core:latest
+docker run --rm -p 8090:8080 -v ${env:USERPROFILE}/.m2:/root/.m2 --name autovulcan autovulcan-core:latest
 ```
 
 Notes:
