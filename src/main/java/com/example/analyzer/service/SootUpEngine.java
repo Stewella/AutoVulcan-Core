@@ -4,15 +4,12 @@ import com.example.analyzer.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import sootup.callgraph.CallGraph;
 import sootup.callgraph.CallGraphAlgorithm;
 import sootup.callgraph.ClassHierarchyAnalysisAlgorithm;
 import sootup.core.inputlocation.AnalysisInputLocation;
 import sootup.core.model.SootMethod;
 import sootup.core.signatures.MethodSignature;
-import sootup.core.types.ClassType;
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation;
-import sootup.java.core.JavaIdentifierFactory;
 import sootup.java.core.JavaSootClass;
 import sootup.java.core.views.JavaView;
 
@@ -46,12 +43,12 @@ public class SootUpEngine {
             
             // Step 3: Build call graph using CHA
             CallGraphAlgorithm cha = new ClassHierarchyAnalysisAlgorithm(view);
-            CallGraph cg = cha.initialize(entryPoints);
+            sootup.callgraph.CallGraph cg = cha.initialize(entryPoints);
             
             logger.info("Call graph built with {} methods", cg.callCount());
             
             // Step 4: Extract call graph nodes and edges
-            CallGraph callGraph = extractCallGraph(cg, view, dependencies);
+            com.example.analyzer.model.CallGraph callGraph = extractCallGraph(cg, view, dependencies);
             
             // Step 5: Extract CFG for each method
             List<CFGMethod> cfgMethods = extractCFG(view);
@@ -73,10 +70,9 @@ public class SootUpEngine {
     
     private List<MethodSignature> findEntryPoints(JavaView view) {
         List<MethodSignature> entryPoints = new ArrayList<>();
-        JavaIdentifierFactory idf = JavaIdentifierFactory.getInstance();
         
-        for (JavaSootClass cls : view.getClasses()) {
-            for (SootMethod method : cls.getMethods()) {
+        for (JavaSootClass cls : view.getClasses().collect(Collectors.toList())) {
+            for (SootMethod method : new ArrayList<SootMethod>(cls.getMethods())) {
                 // Check for main method
                 if (method.getName().equals("main") && method.isStatic() && method.isPublic()) {
                     entryPoints.add(method.getSignature());
@@ -96,15 +92,15 @@ public class SootUpEngine {
     
     private List<MethodSignature> findAllMethods(JavaView view) {
         List<MethodSignature> methods = new ArrayList<>();
-        for (JavaSootClass cls : view.getClasses()) {
-            for (SootMethod method : cls.getMethods()) {
+        for (JavaSootClass cls : view.getClasses().collect(Collectors.toList())) {
+            for (SootMethod method : new ArrayList<SootMethod>(cls.getMethods())) {
                 methods.add(method.getSignature());
             }
         }
         return methods.stream().limit(1).collect(Collectors.toList());
     }
     
-    private CallGraph extractCallGraph(CallGraph cg, JavaView view, List<Dependency> dependencies) {
+    private com.example.analyzer.model.CallGraph extractCallGraph(sootup.callgraph.CallGraph cg, JavaView view, List<Dependency> dependencies) {
         Set<String> dependencyPackages = dependencies.stream()
             .map(d -> d.getGroupId())
             .collect(Collectors.toSet());
@@ -129,7 +125,7 @@ public class SootUpEngine {
             }
         }
         
-        CallGraph result = new CallGraph();
+        com.example.analyzer.model.CallGraph result = new com.example.analyzer.model.CallGraph();
         result.setNodes(new ArrayList<>(nodeMap.values()));
         result.setEdges(edges);
         
@@ -178,8 +174,8 @@ public class SootUpEngine {
     private List<CFGMethod> extractCFG(JavaView view) {
         List<CFGMethod> cfgMethods = new ArrayList<>();
         
-        for (JavaSootClass cls : view.getClasses()) {
-            for (SootMethod method : cls.getMethods()) {
+        for (JavaSootClass cls : view.getClasses().collect(Collectors.toList())) {
+            for (SootMethod method : new ArrayList<SootMethod>(cls.getMethods())) {
                 try {
                     CFGMethod cfgMethod = extractMethodCFG(cls, method);
                     cfgMethods.add(cfgMethod);

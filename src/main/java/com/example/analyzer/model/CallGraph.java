@@ -1,18 +1,25 @@
 package com.example.analyzer.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import java.util.List;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class CallGraph {
     @JsonProperty("nodes")
     private List<CallGraphNode> nodes;
     
     @JsonProperty("edges")
     private List<CallGraphEdge> edges;
+
+    public CallGraph() {}
+
+    public CallGraph(List<CallGraphNode> nodes, List<CallGraphEdge> edges) {
+        this.nodes = nodes;
+        this.edges = edges;
+    }
+
+    public List<CallGraphNode> getNodes() { return nodes; }
+    public void setNodes(List<CallGraphNode> nodes) { this.nodes = nodes; }
+
+    public List<CallGraphEdge> getEdges() { return edges; }
+    public void setEdges(List<CallGraphEdge> edges) { this.edges = edges; }
 }
