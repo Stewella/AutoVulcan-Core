@@ -18,7 +18,7 @@ RUN mkdir -p /app/repository /app/logs
 COPY --from=build /workspace/target/*.jar /app/app.jar
 
 # Expose port
-EXPOSE 8090
+EXPOSE 8080
 
 # Set environment variables
 ENV JAVA_OPTS="-Xmx2g -Xms512m"
