@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Autovulcan_core
 # Build stage: uses Maven to build the fat-jar
-FROM maven:3.8.8-openjdk-17 AS build
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /workspace
 
 # Copy pom and source to use Docker cache effectively
