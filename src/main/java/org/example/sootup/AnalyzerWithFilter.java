@@ -134,8 +134,7 @@ public class AnalyzerWithFilter {
             CallGraphAlgorithm cha = new ClassHierarchyAnalysisAlgorithm(view);
             CallGraph cg = cha.initialize(Collections.singletonList(entrySig));
 
-            @SuppressWarnings("unchecked")
-            Set<Call> calls = (Set<Call>) cg.getCalls();
+            Collection<Call> calls = cg.callsFrom(entrySig);
 
             System.out.println("Total calls in graph: " + calls.size());
 
@@ -145,8 +144,8 @@ public class AnalyzerWithFilter {
             Set<String> allMethods = new HashSet<>();
 
             for (Call c : calls) {
-                String src = c.sourceMethodSignature().toString();
-                String tgt = c.targetMethodSignature().toString();
+                String src = c.getSourceMethodSignature().toString();
+                String tgt = c.getTargetMethodSignature().toString();
                 allMethods.add(src); allMethods.add(tgt);
                 reverse.computeIfAbsent(tgt, k -> new HashSet<>()).add(src);
                 edgeMap.put(src + "->" + tgt, c);
@@ -183,7 +182,6 @@ public class AnalyzerWithFilter {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("src", src);
                     m.put("tgt", tgt);
-                    m.put("line", e.getValue().getLineNumber());
                     filteredEdges.add(m);
                 }
             }

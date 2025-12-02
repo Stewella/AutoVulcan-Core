@@ -178,8 +178,7 @@ public class AnalyzerWithDependencies {
             CallGraphAlgorithm cha = new ClassHierarchyAnalysisAlgorithm(view);
             CallGraph cg = cha.initialize(Collections.singletonList(entryMethodSignature));
             
-            @SuppressWarnings("unchecked")
-            Set<Call> calls = (Set<Call>) cg.getCalls();
+            Collection<Call> calls = cg.callsFrom(entryMethodSignature);
             
             System.out.println("✔ CallGraph built. Total calls: " + calls.size());
 
@@ -191,12 +190,11 @@ public class AnalyzerWithDependencies {
 
             for (Call c : calls) {
                 Map<String, Object> e = new LinkedHashMap<>();
-                String srcMethod = c.sourceMethodSignature().toString();
-                String tgtMethod = c.targetMethodSignature().toString();
+                String srcMethod = c.getSourceMethodSignature().toString();
+                String tgtMethod = c.getTargetMethodSignature().toString();
                 
                 e.put("src", srcMethod);
                 e.put("tgt", tgtMethod);
-                e.put("line", c.getLineNumber());
                 
                 // Extract package/class info for dependency tracking
                 String srcClass = srcMethod.split(":")[0].replaceAll("[<>]", "").trim();

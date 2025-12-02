@@ -156,21 +156,20 @@ public class Analyzer {
             CallGraphAlgorithm cha = new ClassHierarchyAnalysisAlgorithm(view);
             CallGraph cg = cha.initialize(Collections.singletonList(entryMethodSignature));
             
-            @SuppressWarnings("unchecked")
-            Set<Call> calls = (Set<Call>) cg.getCalls();
+            Collection<Call> calls = cg.callsFrom(entryMethodSignature);
+            Set<Call> callSet = new HashSet<>(calls);
             
-            System.out.println("✔ CallGraph built. Total calls: " + calls.size());
+            System.out.println("✔ CallGraph built. Total calls: " + callSet.size());
 
             // ===========================
             // 6. EXPORT CALL GRAPH
             // ===========================
             List<Map<String, Object>> callEdges = new ArrayList<>();
 
-            for (Call c : calls) {
+            for (Call c : callSet) {
                 Map<String, Object> e = new LinkedHashMap<>();
-                e.put("src", c.sourceMethodSignature().toString());
-                e.put("tgt", c.targetMethodSignature().toString());
-                e.put("line", c.getLineNumber());
+                e.put("src", c.getSourceMethodSignature().toString());
+                e.put("tgt", c.getTargetMethodSignature().toString());
                 callEdges.add(e);
             }
 
