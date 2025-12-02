@@ -18,7 +18,7 @@
     <repositories>
       <repository>
           <id>soot-nexus</id>
-          <url>https://soot-oss.github.io/maven https://github.com/soot-oss/SootUp</url>
+          <url>https://soot-oss.github.io/maven</url>
       </repository>
   </repositories>
   
