@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.UUID;
 
 @Service
 public class AnalysisService {
@@ -36,12 +37,39 @@ public class AnalysisService {
     @Autowired
     private FastApiClient fastApiClient;
     
+    /**
+     * Auto-generate projectId if not provided by user
+     */
+    private String generateProjectId(String repositoryUrl) {
+        try {
+            // Extract repository name from URL
+            String repoName = repositoryUrl
+                .substring(repositoryUrl.lastIndexOf("/") + 1)
+                .replace(".zip", "")
+                .replace("-", "_")
+                .toLowerCase();
+            
+            // Combine with timestamp for uniqueness
+            return repoName + "_" + System.currentTimeMillis();
+        } catch (Exception e) {
+            logger.warn("Could not generate projectId from URL, using UUID");
+            return UUID.randomUUID().toString();
+        }
+    }
+    
     @Async
     public void handleAnalysisAsync(AnalysisRequest request) {
         try {
-            logger.info("Starting analysis for project: {}", request.getProjectId());
-            
+            // Auto-generate projectId if not provided
             String projectId = request.getProjectId();
+            if (projectId == null || projectId.trim().isEmpty()) {
+                projectId = generateProjectId(request.getSourceZipUrl());
+                request.setProjectId(projectId);
+                logger.info("Auto-generated projectId: {}", projectId);
+            }
+            
+            logger.info("Starting analysis for project: {}", projectId);
+            
             Path repoDir = Paths.get(repositoryBase, projectId);
             Path srcDir = repoDir.resolve("src");
             Path buildDir = repoDir.resolve("build/classes");
