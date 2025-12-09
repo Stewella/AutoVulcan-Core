@@ -1,3 +1,9 @@
 
 target/
 *.class
+
+# Generated analysis artifacts
+repository/
+logs/
+analysis-results/
+*.log

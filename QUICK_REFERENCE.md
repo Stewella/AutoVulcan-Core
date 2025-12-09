@@ -1,5 +1,52 @@
 # 🚀 Analyzer Service - Quick Reference Card
 
+## 🧪 Test Engine & Download JSON Results
+
+### ⚡ Quick Test (Recommended)
+```powershell
+# Jalankan test script otomatis
+.\test-and-download-results.ps1
+```
+
+**Script ini akan:**
+1. Start analyzer service
+2. Send request untuk analyze Petshop repository
+3. Wait sampai analysis selesai (max 3 menit)
+4. **Download hasil JSON ke folder `analysis-results/`**
+5. Show summary hasil analysis
+
+### 📁 Lokasi Hasil JSON
+
+**Original (di repository engine):**
+```
+repository/
+  └── {projectId}/
+      └── results/
+          └── analysis-result.json  ← HASIL JSON DI SINI
+```
+
+**Downloaded ke local Anda:**
+```
+analysis-results/
+├── petshop-analysis-{timestamp}.json  ← JSON hasil (easy access)
+├── request-response-{timestamp}.json
+└── petshop-{timestamp}/               ← Full project copy
+```
+
+### 📋 Contoh Isi JSON Result
+```json
+{
+  "projectId": "petshop_1733728900123",
+  "callGraph": {
+    "nodes": [...],  // Call graph nodes
+    "edges": [...]   // Call graph edges
+  },
+  "cfg": [...]       // Control Flow Graph methods
+}
+```
+
+---
+
 ## 📡 API Endpoints
 
 ### Analyze Project
